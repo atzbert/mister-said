@@ -1,3 +1,4 @@
+import asyncio
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ChatMemberHandler
 from config import TELEGRAM_TOKEN
 from commands import start, set_lang, my_lang, transcribe_voice_message
@@ -26,5 +27,25 @@ app.add_handler(bot_modified_handler)
 app.add_handler(bot_removed_handler)
 app.add_handler(voice_handler)
 
-app.run_polling()
-start_reset_task()
+def handle_task_completion(task: asyncio.Task) -> None:
+    """Callback to handle the completion of the reset_message_count task."""
+    try:
+        # Check if the task raised an exception
+        if task.exception() is not None:
+            print(f"[ERROR] Reset message count task failed: {task.exception()}")
+        else:
+            # Optionally, log successful completion or check result if the task returns one
+            print("[INFO] Reset message count task completed (or was cancelled).")
+    except asyncio.CancelledError:
+        print("[INFO] Reset message count task was cancelled.")
+    except Exception as e:
+        # Log any other error that might occur within the callback itself
+        print(f"[ERROR] Exception in handle_task_completion: {e}")
+
+if __name__ == "__main__":
+    # Start the background task for resetting message counts
+    reset_task = start_reset_task()
+    reset_task.add_done_callback(handle_task_completion)
+
+    # Run the bot
+    app.run_polling()

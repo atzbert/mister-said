@@ -58,7 +58,7 @@ async def greet_new_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                                 "Please use the '/setlang [code]' command to set your preferred language. "
                                                 "Please use only supported language codes which you can find here: https://cloud.google.com/translate/docs/languages")
         except TelegramError as e:
-            print(f"Error sending greeting message: {e}")
+            print(f"[ERROR] Failed to send welcome message to user {user.id} in chat {chat_id}: {e}")
             continue
 
 @send_typing_action
@@ -104,7 +104,7 @@ async def remove_left_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = left_user.id
 
     doc_ref = db.collection(u'chats').document(str(chat_id)).collection(u'members').document(str(user_id))
-    doc_ref.delete()
+    await doc_ref.delete()
     print(f"Removed language preferences for user {user_id} in chat {chat_id}")
 
 

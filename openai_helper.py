@@ -21,15 +21,47 @@ async def get_openai_response(messages) -> str:
     return None
 
 
+import tempfile
+import os
+
 async def transcribe_audio(audio_data: bytes) -> str:
     openai.api_key = config.OPENAI_API_KEY
+    
+    ogg_temp_file = None
+    mp3_temp_file = None
 
-    with open("my_file.ogg", "wb") as f:
-        f.write(audio_data)
-    convert_ogg_to_mp3("my_file.ogg", "my_file.mp3")
-    audio_file= open("my_file.mp3", "rb")
-    transcript = await openai.Audio.transcribe("whisper-1", audio_file)
-    if transcript:
-        return transcript.strip()
-    else:
+    try:
+        # Create a temporary file for the OGG data
+        with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as ogg_f:
+            ogg_temp_file = ogg_f.name
+            ogg_f.write(audio_data)
+
+        # Create a temporary file for the MP3 data
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as mp3_f:
+            mp3_temp_file = mp3_f.name
+        
+        convert_ogg_to_mp3(ogg_temp_file, mp3_temp_file)
+
+        with open(mp3_temp_file, "rb") as audio_f:
+            transcript_response = await openai.Audio.transcribe("whisper-1", audio_f)
+        
+        if transcript_response and 'text' in transcript_response:
+            return transcript_response['text'].strip()
+        else:
+            # Log if the response format is unexpected
+            print(f"Unexpected response format from OpenAI: {transcript_response}")
+            return None
+            
+    except OpenAIError as e:
+        print(f"Error during OpenAI audio transcription: {e}")
         return None
+    except Exception as e:
+        # Catch other potential errors, e.g., during file operations or conversion
+        print(f"An unexpected error occurred during audio transcription: {e}")
+        return None
+    finally:
+        # Clean up temporary files
+        if ogg_temp_file and os.path.exists(ogg_temp_file):
+            os.remove(ogg_temp_file)
+        if mp3_temp_file and os.path.exists(mp3_temp_file):
+            os.remove(mp3_temp_file)

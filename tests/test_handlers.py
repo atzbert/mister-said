@@ -80,12 +80,17 @@ async def test_translate_message_with_bot_mention_no_openai_response():
 @pytest.mark.asyncio
 async def test_remove_left_user():
     with patch("handlers.db") as mock_db:
+        # Ensure the delete method is an AsyncMock
+        mock_delete = AsyncMock()
+        mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.delete = mock_delete
+
         await remove_left_user(UPDATE, CONTEXT)
+
         mock_db.collection.assert_called_with("chats")
         mock_db.collection().document.assert_called_with(str(UPDATE.effective_chat.id))
         mock_db.collection().document().collection.assert_called_with("members")
         mock_db.collection().document().collection().document.assert_called_with(str(UPDATE.effective_user.id))
-        mock_db.collection().document().collection().document().delete.assert_called()
+        mock_delete.assert_awaited_once()
 
 # Test for bot_removed_from_chat
 @pytest.mark.asyncio
